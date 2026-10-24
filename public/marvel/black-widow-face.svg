@@ -1,0 +1,38 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Black Widow Chibi Toy Face -->
+
+  <!-- Red Wavy Hair (Back) -->
+  <path d="M20 70C14 100 22 135 44 148C34 130 30 105 32 80Z" fill="#B91C1C" stroke="#7F1D1D" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M140 70C146 100 138 135 116 148C126 130 130 105 128 80Z" fill="#B91C1C" stroke="#7F1D1D" stroke-width="3" stroke-linejoin="round"/>
+
+  <!-- Face Skin -->
+  <path d="M80 34C48 34 38 58 38 96C38 126 56 146 80 146C104 146 122 126 122 96C122 58 112 34 80 34Z" fill="#FDE68A" stroke="#92400E" stroke-width="6" stroke-linejoin="round"/>
+
+  <!-- Voluminous Auburn Red Hair (Front / Bangs) -->
+  <path d="M26 68C22 42 42 16 80 16C118 16 138 42 134 68C126 50 114 44 98 46C86 42 74 42 62 48C50 44 36 52 26 68Z" fill="#DC2626" stroke="#7F1D1D" stroke-width="5" stroke-linejoin="round"/>
+  <!-- Hair Wave Strands -->
+  <path d="M38 65C32 85 36 110 46 125C42 110 40 90 42 75Z" fill="#DC2626" stroke="#7F1D1D" stroke-width="3"/>
+  <path d="M122 65C128 85 124 110 114 125C118 110 120 90 118 75Z" fill="#DC2626" stroke="#7F1D1D" stroke-width="3"/>
+  <path d="M62 48C70 58 78 60 86 52" stroke="#7F1D1D" stroke-width="3" stroke-linecap="round" fill="none"/>
+
+  <!-- Eyes with Eyelashes -->
+  <!-- Left Eye -->
+  <path d="M46 80C54 75 66 77 72 84C66 89 54 89 46 80Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M44 79L39 74" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="60" cy="83" r="3.5" fill="#059669"/>
+  <circle cx="61" cy="81.5" r="1.5" fill="#FFFFFF"/>
+
+  <!-- Right Eye -->
+  <path d="M114 80C106 75 94 77 88 84C94 89 106 89 114 80Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M116 79L121 74" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="100" cy="83" r="3.5" fill="#059669"/>
+  <circle cx="101" cy="81.5" r="1.5" fill="#FFFFFF"/>
+
+  <!-- Confident Smile -->
+  <path d="M72 115C76 119 84 119 88 115" stroke="#991B1B" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- Tactical Collar with Black Widow Hourglass -->
+  <path d="M62 144C68 147 74 148 80 148C86 148 92 147 98 144" stroke="#0F172A" stroke-width="6" stroke-linecap="round"/>
+  <!-- Mini Red Hourglass -->
+  <path d="M77 142L83 142L80 146L83 150L77 150L80 146Z" fill="#EF4444"/>
+</svg>

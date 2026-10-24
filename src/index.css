@@ -1,0 +1,289 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-foreground: rgba(255, 255, 255, 0.95);
+  --color-background: rgb(10, 11, 16);
+  --color-muted-foreground: rgba(255, 255, 255, 0.45);
+  --color-muted: rgba(255, 255, 255, 0.05);
+  --color-primary: rgb(236, 29, 36);
+  --color-primary-foreground: rgba(255, 255, 255, 0.98);
+}
+
+:root {
+  --marvel-red: #EC1D24;
+  --marvel-dark-red: #990B11;
+  --stark-cyan: #00F0FF;
+  --stark-dark-cyan: #0099A8;
+  --gold-infinity: #FFD700;
+  --vibranium-black: #0A0B10;
+}
+
+/* ── Marvel Comic & Stark HUD Enhancements ────────────────────── */
+.comic-title {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-style: italic;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.9), 0 0 10px rgba(236, 29, 36, 0.4);
+}
+
+.stark-hud-panel {
+  background: linear-gradient(135deg, rgba(16, 20, 32, 0.85) 0%, rgba(10, 11, 16, 0.95) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.08), inset 0 0 15px rgba(0, 240, 255, 0.03);
+  position: relative;
+}
+
+.stark-hud-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #00F0FF, transparent);
+  opacity: 0.6;
+}
+
+.comic-halftone {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+
+@keyframes hud-scanline {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 0.25; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+.hud-scanline-active {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, transparent 0%, rgba(236, 29, 36, 0.08) 50%, transparent 100%);
+  pointer-events: none;
+  animation: hud-scanline 6s ease-in-out infinite;
+  z-index: 999;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #ffffff 40%,
+    #00F0FF 50%,
+    #EC1D24 55%,
+    #ffffff 65%,
+    #ffffff 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── AnimeNavBar shine sweep ─────────────────────────────────── */
+@keyframes shine {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ── Sidebar label fade-in ────────────────────────────────────── */
+@keyframes sidebar-label-in {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.sidebar-label {
+  animation: sidebar-label-in 0.18s ease-out 0.18s both;
+}
+
+/* ── GooeySearch dark-theme wrapper ──────────────────────────── */
+.ks-search-wrap {
+  --foreground: rgb(14, 10, 26);
+  --background: rgba(255, 255, 255, 0.68);
+}
+
+/* ── GooeySearchBar ───────────────────────────────────────────── */
+.gsb-outer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+@keyframes gsb-spin {
+  to { transform: rotate(360deg); }
+}
+
+.gsb-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  filter: url(#goo-effect);
+}
+.gsb-wrapper.gsb-no-goo {
+  filter: none;
+}
+
+.gsb-button-content {
+  position: relative;
+  height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.gsb-button-content-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 44px;
+}
+
+.gsb-search-btn {
+  position: relative;
+  z-index: 1;
+  height: 44px;
+  border-radius: 22px;
+  background: rgb(12, 8, 22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0 18px;
+  color: white;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.gsb-search-text {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+  pointer-events: none;
+  letter-spacing: 0.01em;
+}
+
+.gsb-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 0.875rem;
+  width: 100%;
+  padding: 0 6px;
+  letter-spacing: 0.01em;
+}
+.gsb-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.gsb-search-results {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.gsb-search-result {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 44px;
+  border-radius: 22px;
+  background: rgb(16, 10, 28);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  cursor: pointer;
+  color: white;
+  pointer-events: auto;
+}
+.gsb-search-result:hover {
+  background: rgb(22, 15, 38);
+}
+
+.gsb-search-result-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.gsb-info-icon {
+  width: 14px;
+  height: 14px;
+  color: rgba(0, 240, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.gsb-separate-element {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  background: rgb(12, 8, 22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.gsb-separate-element--active {
+  background: rgb(180, 20, 28);
+  border-color: rgba(236, 29, 36, 0.5);
+}
+
+.gsb-loading-icon {
+  width: 18px;
+  height: 18px;
+  animation: gsb-spin 1s linear infinite;
+}
+/* ──────────────────────────────────────────────────────────────── */
+
+/* ── Avengers theme extras ───────────────────────────────────── */
+.comic-halftone-dark {
+  background-image: radial-gradient(rgba(0, 0, 0, 0.35) 1.5px, transparent 1.5px);
+  background-size: 9px 9px;
+}
+.comic-speed-lines {
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.12) 0deg 2deg, transparent 2deg 9deg);
+}
+/* Themed scrollbars */
+* { scrollbar-color: rgba(236, 29, 36, 0.45) transparent; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(236, 29, 36, 0.4); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(236, 29, 36, 0.7); }
+::selection { background: rgba(236, 29, 36, 0.55); color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-scanline-active { animation: none; display: none; }
+}

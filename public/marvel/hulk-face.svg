@@ -1,0 +1,30 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hulk Chibi Toy Face -->
+  
+  <!-- Outer Head (Green Skin) -->
+  <path d="M80 18C42 18 22 45 22 92C22 132 44 150 80 150C116 150 138 132 138 92C138 45 118 18 80 18Z" fill="#22C55E" stroke="#14532D" stroke-width="7" stroke-linejoin="round"/>
+  
+  <!-- Shaggy Black Hair -->
+  <path d="M26 62C24 45 35 28 48 20C55 24 62 18 70 14C78 12 85 15 92 14C102 18 108 24 116 20C128 28 136 45 134 62C128 50 120 48 112 52C106 44 98 42 90 46C82 40 76 40 70 46C62 42 54 44 48 52C40 48 32 50 26 62Z" fill="#18181B" stroke="#09090B" stroke-width="5" stroke-linejoin="round"/>
+
+  <!-- Angry Furrowed Eyebrows -->
+  <path d="M38 74L70 86L68 76L42 66Z" fill="#18181B" stroke="#09090B" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M122 74L90 86L92 76L118 66Z" fill="#18181B" stroke="#09090B" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Forehead stress wrinkles -->
+  <path d="M72 58C76 62 84 62 88 58" stroke="#15803D" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M74 66C78 69 82 69 86 66" stroke="#15803D" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Intense Eyes -->
+  <path d="M44 88C48 82 58 82 66 90C58 94 48 94 44 88Z" fill="#FFFFFF" stroke="#09090B" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M116 88C112 82 102 82 94 90C102 94 112 94 116 88Z" fill="#FFFFFF" stroke="#09090B" stroke-width="4" stroke-linejoin="round"/>
+  <circle cx="56" cy="88" r="3" fill="#15803D"/>
+  <circle cx="104" cy="88" r="3" fill="#15803D"/>
+
+  <!-- Wide Grumpy Mouth / Clenched Teeth -->
+  <path d="M50 116C58 112 70 110 80 110C90 110 102 112 110 116C104 128 92 132 80 132C68 132 56 128 50 116Z" fill="#FFFFFF" stroke="#09090B" stroke-width="4.5" stroke-linejoin="round"/>
+  <!-- Teeth line -->
+  <path d="M54 120H106" stroke="#09090B" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M68 114V127" stroke="#09090B" stroke-width="2"/>
+  <path d="M80 112V130" stroke="#09090B" stroke-width="2"/>
+  <path d="M92 114V127" stroke="#09090B" stroke-width="2"/>
+</svg>

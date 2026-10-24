@@ -1,0 +1,36 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Black Panther Chibi Toy Face -->
+
+  <!-- Cat Ears -->
+  <path d="M30 42L42 16L56 36Z" fill="#18181B" stroke="#09090B" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M36 38L42 24L50 35Z" fill="#71717A"/>
+  
+  <path d="M130 42L118 16L104 36Z" fill="#18181B" stroke="#09090B" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M124 38L118 24L110 35Z" fill="#71717A"/>
+
+  <!-- Cowl Head -->
+  <path d="M80 24C44 24 22 48 22 92C22 130 44 148 80 148C116 148 138 130 138 92C138 48 116 24 80 24Z" fill="#18181B" stroke="#09090B" stroke-width="7" stroke-linejoin="round"/>
+
+  <!-- Vibranium Silver Forehead Markings -->
+  <path d="M80 32L80 58" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round"/>
+  <path d="M68 40L80 52L92 40" stroke="#CBD5E1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M62 55L75 65" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+  <path d="M98 55L85 65" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Sharp Sleek White Eyes -->
+  <path d="M36 78C42 66 60 66 68 82C58 88 44 86 36 78Z" fill="#FFFFFF" stroke="#09090B" stroke-width="4.5" stroke-linejoin="round"/>
+  <path d="M124 78C118 66 100 66 92 82C102 88 116 86 124 78Z" fill="#FFFFFF" stroke="#09090B" stroke-width="4.5" stroke-linejoin="round"/>
+
+  <!-- Eye Inner Violet/Silver Accent -->
+  <path d="M46 76L60 76" stroke="#818CF8" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M114 76L100 76" stroke="#818CF8" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Nose Ridge -->
+  <path d="M74 88L80 82L86 88" stroke="#71717A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M76 96L80 98L84 96" stroke="#CBD5E1" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Jaw Vibranium Claws/Teeth Accents -->
+  <path d="M46 112L56 126L60 114" stroke="#E2E8F0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M114 112L104 126L100 114" stroke="#E2E8F0" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M72 122L80 134L88 122" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -1,0 +1,33 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Spider-Man Chibi Toy Face -->
+  <!-- Outer Head -->
+  <path d="M80 12C40 12 18 45 18 90C18 130 45 150 80 150C115 150 142 130 142 90C142 45 120 12 80 12Z" fill="#EE0C28" stroke="#792E0F" stroke-width="7" stroke-linejoin="round"/>
+  
+  <!-- Web Lines -->
+  <!-- Center vertical -->
+  <path d="M80 14V148" stroke="#792E0F" stroke-width="4" stroke-linecap="round"/>
+  <!-- Diagonal spokes -->
+  <path d="M80 75L22 42" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M80 75L138 42" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M80 75L20 85" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M80 75L140 85" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M80 75L35 135" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M80 75L125 135" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round"/>
+  
+  <!-- Web arcs (forehead) -->
+  <path d="M48 30C58 38 68 40 80 40C92 40 102 38 112 30" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <path d="M34 50C48 60 62 64 80 64C98 64 112 60 126 50" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  
+  <!-- Web arcs (chin) -->
+  <path d="M44 115C56 108 68 105 80 105C92 105 104 108 116 115" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <path d="M52 135C62 130 70 128 80 128C90 128 98 130 108 135" stroke="#792E0F" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Left Eye -->
+  <path d="M26 72C28 50 50 44 72 70C65 94 45 104 28 92C25 86 25 78 26 72Z" fill="#FFFFFF" stroke="#18181B" stroke-width="7" stroke-linejoin="round"/>
+  <!-- Right Eye -->
+  <path d="M134 72C132 50 110 44 88 70C95 94 115 104 132 92C135 86 135 78 134 72Z" fill="#FFFFFF" stroke="#18181B" stroke-width="7" stroke-linejoin="round"/>
+
+  <!-- Eye Inner Sheen -->
+  <path d="M38 62C42 56 50 54 58 60" stroke="#E0E7FF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M122 62C118 56 110 54 102 60" stroke="#E0E7FF" stroke-width="3" stroke-linecap="round"/>
+</svg>
