@@ -22,6 +22,19 @@ class Profile(BaseModel):
     current_skills: list[str] = []
 
 
+class ProfileUpdate(BaseModel):
+    """Partial profile update; omitted fields keep their stored values."""
+    name: str | None = None
+    email: str | None = None
+    institution: str | None = None
+    degree: str | None = None
+    branch: str | None = None
+    graduation_year: str | None = None
+    career_goal: str | None = None
+    target_role: str | None = None
+    current_skills: list[str] | None = None
+
+
 def _row_to_profile(row) -> Profile:
     skills = []
     if row["current_skills"]:
@@ -89,14 +102,34 @@ async def get_my_profile(
 
 @router.put("/me", response_model=Profile)
 async def upsert_my_profile(
-    profile: Profile,
+    profile: ProfileUpdate,
     user_id: str = Depends(get_current_user_id),
+    user: dict = Depends(get_current_user),
 ) -> Profile:
     conn = get_db_connection()
     cursor = conn.cursor()
     now = datetime.now(timezone.utc).isoformat()
 
-    skills_json = json.dumps(profile.current_skills)
+    cursor.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
+    existing = cursor.fetchone()
+    current = (
+        _row_to_profile(existing)
+        if existing
+        else Profile(
+            name=user.get("full_name", "Student"),
+            email=user.get("email", ""),
+            current_skills=[],
+        )
+    )
+
+    supplied = profile.model_dump(exclude_unset=True)
+    supplied.pop("name", None)
+    supplied.pop("email", None)
+    merged = current.model_copy(update=supplied)
+    merged.name = profile.name or current.name
+    merged.email = profile.email or current.email
+
+    skills_json = json.dumps(merged.current_skills)
 
     cursor.execute(
         """
@@ -119,14 +152,14 @@ async def upsert_my_profile(
         """,
         (
             user_id,
-            profile.name,
-            profile.email,
-            profile.institution,
-            profile.degree,
-            profile.branch,
-            profile.graduation_year,
-            profile.career_goal,
-            profile.target_role,
+            merged.name,
+            merged.email,
+            merged.institution,
+            merged.degree,
+            merged.branch,
+            merged.graduation_year,
+            merged.career_goal,
+            merged.target_role,
             skills_json,
             now,
         ),
