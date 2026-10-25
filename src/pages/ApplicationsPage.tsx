@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Briefcase,
   Clock,
@@ -39,6 +39,7 @@ import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button
 import { ShieldEagleLogo, ArcReactor } from "../components/marvel/MarvelIcons";
 import { HeroTint } from "../components/marvel/HeroTint";
 import { marvelAudio } from "../components/marvel/MarvelAudioEngine";
+import { api, type ApplicationItem } from "../lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -503,18 +504,36 @@ interface ApplicationsPageProps {
 export default function ApplicationsPage({ onNavigate }: ApplicationsPageProps) {
   const [activeTab, setActiveTab] = useState<AppTab>("all");
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
+  const [applications, setApplications] = useState<Application[]>(apps);
+
+  useEffect(() => {
+    let active = true;
+    api.applications
+      .list()
+      .then((data) => {
+        if (active && data && data.length > 0) {
+          setApplications(data as unknown as Application[]);
+        }
+      })
+      .catch((err) => {
+        console.warn("Using sample applications:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filteredApps = useMemo(
-    () => apps.filter(getTabFilter(activeTab)),
-    [activeTab]
+    () => applications.filter(getTabFilter(activeTab)),
+    [activeTab, applications]
   );
 
   const stats = {
-    total: apps.length,
-    progress: apps.filter(getTabFilter("progress")).length,
-    interview: apps.filter(getTabFilter("interview")).length,
-    offer: apps.filter(getTabFilter("offer")).length,
-    rejected: apps.filter(getTabFilter("rejected")).length,
+    total: applications.length,
+    progress: applications.filter(getTabFilter("progress")).length,
+    interview: applications.filter(getTabFilter("interview")).length,
+    offer: applications.filter(getTabFilter("offer")).length,
+    rejected: applications.filter(getTabFilter("rejected")).length,
   };
 
   return (

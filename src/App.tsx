@@ -22,6 +22,7 @@ import { SpiderManWebDrop } from "./components/marvel/SpiderManWebDrop";
 import { MarvelCelebrations } from "./components/marvel/MarvelCelebrations";
 import { useMarvelPrefs } from "./components/marvel/marvelPrefs";
 import { HulkCursorCompanion } from "./components/marvel/HulkCursorCompanion";
+import StarkAiAssistantDrawer from "./components/chat/StarkAiAssistantDrawer";
 
 export type Page =
   | "home"
@@ -37,6 +38,7 @@ export type Page =
   | "role-select";
 
 import React from "react";
+import { api, getCachedUser } from "./lib/api";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -231,76 +233,95 @@ export default function App() {
   const [userName, setUserName] = useState("");
 
   const [showSignIn, setShowSignIn] = useState(false);
-  const [signInEmail, setSignInEmail] = useState("");
-  const [signInPassword, setSignInPassword] = useState("");
-
   const [showSignUp, setShowSignUp] = useState(false);
-  const [signUpStep, setSignUpStep] = useState(0);
-  const [signUpData, setSignUpData] = useState<SignUpData>(emptySignUp);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  // Stark AI Assistant Drawer State
+  const [isAiDrawerOpen, setIsAiDrawerOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+
+  // Restore authenticated session from SQLite backend / local storage
+  useEffect(() => {
+    const cached = getCachedUser();
+    if (cached) {
+      setUserName(cached.name);
+      setIsAuthenticated(true);
+    }
+    if (api.auth.isAuthenticated()) {
+      api.auth
+        .getMe()
+        .then((user) => {
+          setUserName(user.name);
+          setIsAuthenticated(true);
+        })
+        .catch(() => {
+          // Token expired or server restarted
+        });
+    }
+  }, []);
+
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    if (!authEmail.trim()) return;
+    setIsAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await api.auth.login(authEmail.trim(), authName.trim() || undefined);
+      marvelAudio.playVibraniumChime();
+      setUserName(res.user.name);
+      setIsAuthenticated(true);
+      setShowSignIn(false);
+      setAuthEmail("");
+      setAuthName("");
+      setActivePage("home");
+    } catch (err: any) {
+      setAuthError(err.message || "Unable to sign in. Please verify backend is running.");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }
+
+  async function handleSignUp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!authEmail.trim()) return;
+    setIsAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await api.auth.signup(authEmail.trim(), authName.trim() || undefined);
+      marvelAudio.playVibraniumChime();
+      setUserName(res.user.name);
+      setIsAuthenticated(true);
+      setShowSignUp(false);
+      setAuthEmail("");
+      setAuthName("");
+      setActivePage("home");
+    } catch (err: any) {
+      setAuthError(err.message || "Unable to register. Please verify backend is running.");
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }
 
   function handleQuickAction(prompt: string, targetPage: Page) {
-    setMessage(prompt);
+    marvelAudio.playRepulsorClick();
     setActivePage(targetPage);
+    setAiPrompt(prompt);
+    setIsAiDrawerOpen(true);
   }
 
   function handleSubmitPrompt(e?: React.MouseEvent) {
     if (!message.trim()) return;
     marvelAudio.playRepulsorClick();
     if (e) triggerMarvelBurst(e.clientX, e.clientY);
-    const lower = message.toLowerCase();
-    if (lower.includes("skill") || lower.includes("gap") || lower.includes("audit")) {
-      setActivePage("skills");
-    } else if (lower.includes("learn") || lower.includes("roadmap") || lower.includes("course") || lower.includes("study")) {
-      setActivePage("learning");
-    } else if (lower.includes("passport") || lower.includes("credential") || lower.includes("certif")) {
-      setActivePage("skill-passport");
-    } else if (lower.includes("apply") || lower.includes("application") || lower.includes("status")) {
-      setActivePage("applications");
-    } else if (lower.includes("agent") || lower.includes("activity") || lower.includes("log")) {
-      setActivePage("agent-activity");
-    } else if (lower.includes("goal") || lower.includes("target") || lower.includes("career")) {
-      setActivePage("career-goal");
-    } else if (lower.includes("setting") || lower.includes("profile") || lower.includes("resume")) {
-      setActivePage("settings");
-    } else {
-      setActivePage("opportunities");
-    }
+    const query = message.trim();
+    setMessage("");
+    setAiPrompt(query);
+    setIsAiDrawerOpen(true);
   }
 
-  function handleSignIn(e: React.FormEvent) {
-    e.preventDefault();
-    marvelAudio.playVibraniumChime();
-    const name = signInEmail.split("@")[0] || "there";
-    setUserName(name.charAt(0).toUpperCase() + name.slice(1));
-    setIsAuthenticated(true);
-    setShowSignIn(false);
-    setSignInEmail("");
-    setSignInPassword("");
-    setActivePage("home");
-  }
-
-  function handleSignUpNext(e: React.FormEvent) {
-    e.preventDefault();
-    marvelAudio.playRepulsorClick();
-    if (signUpStep < 2) {
-      setSignUpStep((s) => s + 1);
-    } else {
-      marvelAudio.playVibraniumChime();
-      setUserName(
-        signUpData.name.trim()
-          ? signUpData.name.trim().split(" ")[0]
-          : "Nishant"
-      );
-      setIsAuthenticated(true);
-      setShowSignUp(false);
-      setSignUpStep(0);
-      setSignUpData(emptySignUp);
-    }
-  }
-
-  function updateSignUp(field: keyof SignUpData, value: string) {
-    setSignUpData((prev) => ({ ...prev, [field]: value }));
-  }
 
   const quickActions: { icon: React.ReactNode; label: string; prompt: string; page: Page }[] = [
     {
@@ -364,7 +385,12 @@ export default function App() {
           onExpandChange={setSidebarExpanded}
           activePage={activePage}
           onNavigate={setActivePage}
+          onOpenStarkAi={() => {
+            setAiPrompt("");
+            setIsAiDrawerOpen(true);
+          }}
           onSignOut={() => {
+            api.auth.logout();
             setIsAuthenticated(false);
             setUserName("");
             setActivePage("role-select");
@@ -382,6 +408,7 @@ export default function App() {
               <button
                 onClick={() => {
                   marvelAudio.playRepulsorClick();
+                  api.auth.logout();
                   setIsAuthenticated(false);
                   setUserName("");
                   setActivePage("role-select");
@@ -597,19 +624,20 @@ export default function App() {
 
       {/* Sign In Modal */}
       {showSignIn && (
-        <div className={glassModal} onClick={() => setShowSignIn(false)}>
+        <div className={glassModal} onClick={() => { setShowSignIn(false); setAuthError(""); }}>
           <div className={glassPanel} onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => {
                 marvelAudio.playRepulsorClick();
                 setShowSignIn(false);
+                setAuthError("");
               }}
               className="absolute top-4 right-4 text-cyan-400/60 hover:text-white transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="mb-7">
+            <div className="mb-6">
               <div className="flex items-center gap-2 mb-1.5">
                 <ShieldEagleLogo className="w-5 h-5 text-red-500" />
                 <span className="text-[10px] font-mono text-[#EC1D24] font-bold uppercase tracking-widest">
@@ -620,9 +648,15 @@ export default function App() {
                 Welcome Back
               </h2>
               <p className="text-xs font-mono text-zinc-400">
-                Sign in to access your Skill Passport
+                Sign in to your Skill Passport with your email
               </p>
             </div>
+
+            {authError && (
+              <div className="mb-4 p-2.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-mono">
+                {authError}
+              </div>
+            )}
 
             <form onSubmit={handleSignIn} className="flex flex-col gap-4">
               <div>
@@ -630,28 +664,28 @@ export default function App() {
                 <input
                   type="email"
                   required
-                  value={signInEmail}
-                  onChange={(e) => setSignInEmail(e.target.value)}
-                  placeholder="you@university.edu"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="student@university.edu"
                   className={inputCls}
                 />
               </div>
               <div>
-                <label className={labelCls}>Password</label>
+                <label className={labelCls}>Your Name (Optional)</label>
                 <input
-                  type="password"
-                  required
-                  value={signInPassword}
-                  onChange={(e) => setSignInPassword(e.target.value)}
-                  placeholder="••••••••"
+                  type="text"
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  placeholder="e.g. Tony Stark"
                   className={inputCls}
                 />
               </div>
               <button
                 type="submit"
-                className="mt-2 w-full py-2.5 rounded-xl border border-yellow-400/40 bg-red-600 hover:bg-red-500 text-white text-sm font-bold tracking-wider uppercase transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.4)]"
+                disabled={isAuthLoading || !authEmail.trim()}
+                className="mt-2 w-full py-2.5 rounded-xl border border-yellow-400/40 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-bold tracking-wider uppercase transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.4)]"
               >
-                Sign In
+                {isAuthLoading ? "Authenticating..." : "Sign In with Stark ID"}
               </button>
             </form>
 
@@ -661,6 +695,7 @@ export default function App() {
                 onClick={() => {
                   setShowSignIn(false);
                   setShowSignUp(true);
+                  setAuthError("");
                 }}
                 className="text-[#EC1D24] hover:underline cursor-pointer font-bold"
               >
@@ -673,183 +708,126 @@ export default function App() {
 
       {/* Sign Up Modal */}
       {showSignUp && (
-        <div className={glassModal} onClick={() => setShowSignUp(false)}>
+        <div className={glassModal} onClick={() => { setShowSignUp(false); setAuthError(""); }}>
           <div className={glassPanel} onClick={(e) => e.stopPropagation()}>
             <button
               onClick={() => {
                 setShowSignUp(false);
-                setSignUpStep(0);
-                setSignUpData(emptySignUp);
+                setAuthError("");
               }}
               className="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center gap-2 mb-6">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className={`h-1.5 flex-1 rounded-full transition-colors ${
-                    i <= signUpStep ? "bg-red-500 shadow-[0_0_8px_#EC1D24]" : "bg-zinc-800"
-                  }`}
-                />
-              ))}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-1.5">
+                <ShieldEagleLogo className="w-5 h-5 text-red-500" />
+                <span className="text-[10px] font-mono text-[#EC1D24] font-bold uppercase tracking-widest">
+                  Quick Registration
+                </span>
+              </div>
+              <h2 className="text-xl font-black italic text-white mb-1 uppercase">
+                Create Your Account
+              </h2>
+              <p className="text-xs font-mono text-zinc-400">
+                Enter your name and email to initialize your passport
+              </p>
             </div>
 
-            {signUpStep === 0 && (
-              <>
-                <h2 className="text-xl font-black italic text-white mb-1 uppercase">
-                  Create Your Account
-                </h2>
-                <p className="text-xs font-mono text-zinc-400 mb-6">
-                  Step 1 of 3 — Basic Information
-                </p>
-                <form onSubmit={handleSignUpNext} className="flex flex-col gap-4">
-                  <div>
-                    <label className={labelCls}>Full Name</label>
-                    <input
-                      required
-                      value={signUpData.name}
-                      onChange={(e) => updateSignUp("name", e.target.value)}
-                      placeholder="e.g. Nishant Singh"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      value={signUpData.email}
-                      onChange={(e) => updateSignUp("email", e.target.value)}
-                      placeholder="student@university.edu"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>College / University</label>
-                    <input
-                      value={signUpData.institution}
-                      onChange={(e) =>
-                        updateSignUp("institution", e.target.value)
-                      }
-                      placeholder="e.g. IIIT Tiruchirappalli"
-                      className={inputCls}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="mt-2 w-full py-2.5 rounded-lg border border-yellow-400/30 bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-[0_0_15px_rgba(236,29,36,0.3)]"
-                  >
-                    Continue to Education
-                  </button>
-                </form>
-              </>
+            {authError && (
+              <div className="mb-4 p-2.5 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-mono">
+                {authError}
+              </div>
             )}
 
-            {signUpStep === 1 && (
-              <>
-                <h2 className="text-xl font-black italic text-white mb-1 uppercase">
-                  Education Details
-                </h2>
-                <p className="text-xs font-mono text-zinc-400 mb-6">
-                  Step 2 of 3 — Academic Background
-                </p>
-                <form onSubmit={handleSignUpNext} className="flex flex-col gap-4">
-                  <div>
-                    <label className={labelCls}>Degree Program</label>
-                    <input
-                      value={signUpData.degree}
-                      onChange={(e) => updateSignUp("degree", e.target.value)}
-                      placeholder="e.g. B.Tech Computer Science"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Department / Branch</label>
-                    <input
-                      value={signUpData.branch}
-                      onChange={(e) => updateSignUp("branch", e.target.value)}
-                      placeholder="e.g. Computer Science & Engineering"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Graduation Year</label>
-                    <input
-                      value={signUpData.graduationYear}
-                      onChange={(e) =>
-                        updateSignUp("graduationYear", e.target.value)
-                      }
-                      placeholder="e.g. 2027"
-                      className={inputCls}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="mt-2 w-full py-2.5 rounded-lg border border-yellow-400/30 bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-[0_0_15px_rgba(236,29,36,0.3)]"
-                  >
-                    Continue to Career Goals
-                  </button>
-                </form>
-              </>
-            )}
+            <form onSubmit={handleSignUp} className="flex flex-col gap-4">
+              <div>
+                <label className={labelCls}>Full Name</label>
+                <input
+                  required
+                  value={authName}
+                  onChange={(e) => setAuthName(e.target.value)}
+                  placeholder="e.g. Peter Parker"
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="peter.parker@university.edu"
+                  className={inputCls}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isAuthLoading || !authEmail.trim()}
+                className="mt-2 w-full py-2.5 rounded-lg border border-yellow-400 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.5)]"
+              >
+                {isAuthLoading ? "Initializing..." : "Create Account & Enter"}
+              </button>
+            </form>
 
-            {signUpStep === 2 && (
-              <>
-                <h2 className="text-xl font-black italic text-white mb-1 uppercase">
-                  Career Goal & Skills
-                </h2>
-                <p className="text-xs font-mono text-zinc-400 mb-6">
-                  Step 3 of 3 — Target Role & Skills
-                </p>
-                <form onSubmit={handleSignUpNext} className="flex flex-col gap-4">
-                  <div>
-                    <label className={labelCls}>Career Goal</label>
-                    <input
-                      value={signUpData.careerGoal}
-                      onChange={(e) =>
-                        updateSignUp("careerGoal", e.target.value)
-                      }
-                      placeholder="e.g. AI / ML Engineer at a top tech company"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Target Role</label>
-                    <input
-                      value={signUpData.targetRole}
-                      onChange={(e) =>
-                        updateSignUp("targetRole", e.target.value)
-                      }
-                      placeholder="e.g. Machine Learning Engineer"
-                      className={inputCls}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Current Skills</label>
-                    <input
-                      value={signUpData.currentSkills}
-                      onChange={(e) =>
-                        updateSignUp("currentSkills", e.target.value)
-                      }
-                      placeholder="e.g. Python, SQL, React, PyTorch"
-                      className={inputCls}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="mt-2 w-full py-2.5 rounded-lg border border-yellow-400 bg-red-600 hover:bg-red-500 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.5)]"
-                  >
-                    Complete Registration
-                  </button>
-                </form>
-              </>
-            )}
+            <p className="mt-5 text-center text-xs text-zinc-400">
+              Already have an account?{" "}
+              <button
+                onClick={() => {
+                  setShowSignUp(false);
+                  setShowSignIn(true);
+                  setAuthError("");
+                }}
+                className="text-[#EC1D24] hover:underline cursor-pointer font-bold"
+              >
+                Sign In
+              </button>
+            </p>
           </div>
         </div>
       )}
+
+      {/* Floating Stark Tactical AI HUD Button */}
+      {activePage !== "role-select" && activePage !== "industry" && (
+        <button
+          onClick={(e) => {
+            marvelAudio.playRepulsorClick();
+            triggerMarvelBurst(e.clientX, e.clientY);
+            setAiPrompt("");
+            setIsAiDrawerOpen(true);
+          }}
+          onMouseEnter={() => marvelAudio.playHudHover()}
+          className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-40 group flex items-center gap-2.5 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full bg-black/90 border border-cyan-500/50 hover:border-[#EC1D24] text-white shadow-[0_0_25px_rgba(0,240,255,0.35)] hover:shadow-[0_0_35px_rgba(236,29,36,0.6)] backdrop-blur-xl transition-all duration-300 cursor-pointer"
+          title="Engage Stark Tactical AI Assistant"
+        >
+          <div className="relative w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center">
+            <ArcReactor className="w-full h-full text-cyan-400 group-hover:text-red-400 transition-colors" pulse={true} />
+          </div>
+          <div className="flex flex-col text-left pr-1">
+            <span className="text-[11px] sm:text-xs font-black italic uppercase tracking-wider text-white group-hover:text-red-400 transition-colors font-sans leading-tight">
+              STARK AI
+            </span>
+            <span className="text-[9px] font-mono text-cyan-400/90 leading-tight">
+              ASSISTANT // ONLINE
+            </span>
+          </div>
+        </button>
+      )}
+
+      {/* Live Stark AI Assistant Drawer */}
+      <StarkAiAssistantDrawer
+        isOpen={isAiDrawerOpen}
+        onClose={() => setIsAiDrawerOpen(false)}
+        initialPrompt={aiPrompt}
+        pageContext={activePage}
+        onNavigate={(page) => {
+          if (VALID_PAGES.includes(page as Page)) {
+            setActivePage(page as Page);
+          }
+        }}
+      />
     </main>
     </StarkErrorBoundary>
   );

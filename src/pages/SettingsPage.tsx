@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CircleUserRound,
   Target,
@@ -35,6 +35,7 @@ import { ShieldEagleLogo, ArcReactor } from "../components/marvel/MarvelIcons";
 import { MarvelExperienceSettings } from "../components/marvel/MarvelExperienceSettings";
 import { HeroTint } from "../components/marvel/HeroTint";
 import { marvelAudio } from "../components/marvel/MarvelAudioEngine";
+import { api, type ProfileData } from "../lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,12 +84,12 @@ function FieldRow({
       {editing ? (
         <input
           type={inputType}
-          defaultValue={value}
+          value={value}
           onChange={(e) => onChange?.(e.target.value)}
           className="flex-1 bg-white/5 border border-[#00F0FF]/30 rounded-lg px-3 py-1 text-xs text-white/90 font-mono focus:outline-none focus:border-[#00F0FF] focus:ring-1 focus:ring-[#00F0FF]/30 transition-all"
         />
       ) : (
-        <span className="flex-1 text-xs font-mono text-white/80 text-right">{value}</span>
+        <span className="flex-1 text-xs font-mono text-white/80 text-right">{value || "—"}</span>
       )}
     </div>
   );
@@ -151,13 +152,62 @@ function MultiChip({
 function ProfileSection() {
   const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [profile, setProfile] = useState<ProfileData>({
+    name: "Tony Stark",
+    email: "demo@kickskill.com",
+    institution: "MIT / Stark Institute",
+    degree: "B.Tech in Artificial Intelligence",
+    branch: "Computer Science & Engineering",
+    graduation_year: "2026",
+    career_goal: "Architect state-of-the-art AI systems and autonomous agents.",
+    target_role: "AI Engineer / Autonomous Systems",
+    current_skills: ["Python", "Machine Learning", "PyTorch", "SQL", "React"],
+  });
 
-  function handleSave() {
+  useEffect(() => {
+    let active = true;
+    api.profile
+      .getMe()
+      .then((data) => {
+        if (active && data) {
+          setProfile(data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Using offline profile data:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function handleSave() {
     marvelAudio.playRepulsorClick();
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setIsSaving(true);
+    setSaveError("");
+    try {
+      const updated = await api.profile.updateMe(profile);
+      setProfile(updated);
+      setSaved(true);
+      setEditing(false);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save profile to database");
+    } finally {
+      setIsSaving(false);
+    }
   }
+
+  const initials =
+    profile.name
+      .split(" ")
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "ST";
 
   return (
     <div className="space-y-5">
@@ -169,7 +219,7 @@ function ProfileSection() {
           </h2>
         </div>
         <p className="text-xs text-white/45">
-          Manage your student profile, university details, and contact information.
+          Manage your verified student profile, university details, and contact information.
         </p>
       </div>
 
@@ -177,20 +227,20 @@ function ProfileSection() {
       <CardWrap className="p-5">
         <div className="flex items-center gap-4 mb-5 pb-5 border-b border-white/10">
           <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-[#EC1D24]/30 via-black to-[#00F0FF]/25 border-2 border-[#00F0FF]/40 flex items-center justify-center shrink-0 shadow-[0_0_20px_rgba(0,240,255,0.2)]">
-            <span className="text-xl font-black font-mono text-[#00F0FF]">NS</span>
+            <span className="text-xl font-black font-mono text-[#00F0FF]">{initials}</span>
             <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded bg-[#EC1D24] text-[9px] font-mono font-bold text-white shadow">
               PRO
             </span>
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-base font-bold font-mono text-white/95">Nishant Singh</p>
+              <p className="text-base font-bold font-mono text-white/95">{profile.name}</p>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#00F0FF]/15 border border-[#00F0FF]/30 text-[#00F0FF]">
                 VERIFIED STUDENT
               </span>
             </div>
             <p className="text-xs font-mono text-white/45 mt-0.5">
-              IIIT Tiruchirappalli · Student ID #TK-9024
+              {profile.institution || "KickSkill Academy"} · {profile.email}
             </p>
           </div>
           {!editing && (
@@ -208,18 +258,57 @@ function ProfileSection() {
           )}
         </div>
         <div>
-          <FieldRow label="Email Address" value="nishant@example.com" editing={editing} inputType="email" />
-          <FieldRow label="Institution" value="IIIT Tiruchirappalli" editing={editing} />
-          <FieldRow label="Degree" value="B.Tech Computer Science" editing={editing} />
-          <FieldRow label="Specialization" value="Artificial Intelligence & Machine Learning" editing={editing} />
-          <FieldRow label="Graduation Year" value="2027" editing={editing} />
-          <FieldRow label="Account Status" value="Verified Student" editing={false} />
+          <FieldRow
+            label="Full Name"
+            value={profile.name}
+            editing={editing}
+            onChange={(v) => setProfile((p) => ({ ...p, name: v }))}
+          />
+          <FieldRow
+            label="Email Address"
+            value={profile.email}
+            editing={editing}
+            inputType="email"
+            onChange={(v) => setProfile((p) => ({ ...p, email: v }))}
+          />
+          <FieldRow
+            label="Institution"
+            value={profile.institution || ""}
+            editing={editing}
+            onChange={(v) => setProfile((p) => ({ ...p, institution: v }))}
+          />
+          <FieldRow
+            label="Degree Program"
+            value={profile.degree || ""}
+            editing={editing}
+            onChange={(v) => setProfile((p) => ({ ...p, degree: v }))}
+          />
+          <FieldRow
+            label="Department / Branch"
+            value={profile.branch || ""}
+            editing={editing}
+            onChange={(v) => setProfile((p) => ({ ...p, branch: v }))}
+          />
+          <FieldRow
+            label="Graduation Year"
+            value={profile.graduation_year || ""}
+            editing={editing}
+            onChange={(v) => setProfile((p) => ({ ...p, graduation_year: v }))}
+          />
+          <FieldRow label="Account Status" value="Verified Student (SQLite Synced)" editing={false} />
         </div>
+
+        {saveError && (
+          <div className="mt-3 p-2 rounded-lg bg-red-950/60 border border-red-500/40 text-red-300 text-xs font-mono">
+            {saveError}
+          </div>
+        )}
+
         {editing && (
           <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
             <div className={`text-xs font-mono text-[#00F0FF] transition-opacity ${saved ? "opacity-100" : "opacity-0"}`}>
               <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Profile saved successfully.
+                <CheckCircle2 className="w-3.5 h-3.5" /> Profile synced with SQLite database!
               </span>
             </div>
             <div className="flex gap-2 ml-auto">
@@ -227,6 +316,7 @@ function ProfileSection() {
                 onClick={() => {
                   marvelAudio.playRepulsorClick();
                   setEditing(false);
+                  setSaveError("");
                 }}
                 className="px-4 py-1.5 rounded-xl text-xs font-mono text-white/40 hover:text-white transition-colors cursor-pointer"
               >
@@ -234,10 +324,11 @@ function ProfileSection() {
               </button>
               <button
                 onClick={handleSave}
+                disabled={isSaving}
                 onMouseEnter={() => marvelAudio.playHudHover()}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#EC1D24] text-white text-xs font-mono font-bold hover:bg-[#ff2b33] transition-all cursor-pointer shadow-[0_0_15px_rgba(236,29,36,0.4)]"
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#EC1D24] text-white text-xs font-mono font-bold hover:bg-[#ff2b33] disabled:opacity-50 transition-all cursor-pointer shadow-[0_0_15px_rgba(236,29,36,0.4)]"
               >
-                <CheckCircle2 className="w-3 h-3" /> Save Changes
+                <CheckCircle2 className="w-3 h-3" /> {isSaving ? "Saving..." : "Save to SQLite"}
               </button>
             </div>
           </div>

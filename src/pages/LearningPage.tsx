@@ -16,6 +16,8 @@ import {
   TrendingUp,
   Zap,
   Target,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { AnimeNavBar } from "@/components/ui/anime-navbar";
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
@@ -23,6 +25,9 @@ import { MovingBorderBox } from "@/components/ui/moving-border";
 import { ShieldEagleLogo, ArcReactor } from "../components/marvel/MarvelIcons";
 import { HeroTint } from "../components/marvel/HeroTint";
 import { marvelAudio } from "../components/marvel/MarvelAudioEngine";
+import { CourseDetailModal, type CourseDetail } from "../components/learning/CourseDetailModal";
+import { ProjectDetailModal, type ProjectDetail } from "../components/learning/ProjectDetailModal";
+import { api, type RoadmapData, type RoadmapStep } from "../lib/api";
 
 const learningNavItems = [
   { name: "Recommended", icon: Sparkles },
@@ -197,7 +202,13 @@ function ProgressBar({ value, color = "#EC1D24" }: { value: number; color?: stri
   );
 }
 
-function RecommendationsGrid() {
+function RecommendationsGrid({
+  onOpenCourse,
+  onOpenProject,
+}: {
+  onOpenCourse: (c: CourseDetail) => void;
+  onOpenProject: (p: ProjectDetail) => void;
+}) {
   const [activeIdx, setActiveIdx] = useState<number>(0);
 
   const rows = useMemo(() => {
@@ -287,7 +298,29 @@ function RecommendationsGrid() {
                 )}
 
                 <button
-                  onClick={() => marvelAudio.playRepulsorClick()}
+                  onClick={() => {
+                    marvelAudio.playRepulsorClick();
+                    if (rec.type === "project") {
+                      onOpenProject({
+                        title: rec.title,
+                        desc: rec.impact,
+                        skills: rec.skills || ["Python", "NLP", "Machine Learning"],
+                        difficulty: "Intermediate",
+                        impact: "High",
+                        duration: "2-3 weeks",
+                      });
+                    } else {
+                      onOpenCourse({
+                        title: rec.title,
+                        provider: "KickSkill Academy",
+                        category: "AI/ML",
+                        skill: rec.skillGap || "Deep Learning",
+                        difficulty: "Intermediate",
+                        duration: "4 weeks",
+                        progress: rec.progress,
+                      });
+                    }
+                  }}
                   className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider border border-[#EC1D24]/30 bg-black/60 text-white hover:bg-[#EC1D24]/20 hover:border-[#EC1D24] transition-all cursor-pointer shadow-[0_0_12px_rgba(236,29,36,0.2)]"
                 >
                   {rec.started ? <Play className="w-3.5 h-3.5 text-amber-400" /> : <ArrowRight className="w-3.5 h-3.5 text-amber-400" />}
@@ -302,7 +335,13 @@ function RecommendationsGrid() {
   );
 }
 
-function ForYouTab() {
+function ForYouTab({
+  onOpenCourse,
+  onOpenProject,
+}: {
+  onOpenCourse: (c: CourseDetail) => void;
+  onOpenProject: (p: ProjectDetail) => void;
+}) {
   return (
     <div className="space-y-10">
       <section>
@@ -319,7 +358,7 @@ function ForYouTab() {
             </p>
           </div>
         </div>
-        <RecommendationsGrid />
+        <RecommendationsGrid onOpenCourse={onOpenCourse} onOpenProject={onOpenProject} />
       </section>
 
       {/* AI Learning Recommendation */}
@@ -342,7 +381,18 @@ function ForYouTab() {
               The roles you are targeting require at least 70% proficiency in PyTorch (currently 42%). Completing this recommended track will lift your profile match from 74% to 94%.
             </p>
             <button
-              onClick={() => marvelAudio.playRepulsorClick()}
+              onClick={() => {
+                marvelAudio.playRepulsorClick();
+                onOpenCourse({
+                  title: "PyTorch Deep Learning Fundamentals",
+                  provider: "deeplearning.ai",
+                  category: "AI/ML",
+                  skill: "PyTorch",
+                  difficulty: "Advanced",
+                  duration: "4 weeks",
+                  progress: 42,
+                });
+              }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#EC1D24] border border-yellow-400/60 text-white text-xs font-mono font-bold uppercase tracking-wider hover:bg-red-600 transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.4)]"
             >
               <Sparkles className="w-4 h-4 text-amber-400" />
@@ -356,41 +406,109 @@ function ForYouTab() {
 }
 
 function RoadmapsTab() {
-  const progress = 42;
+  const [roadmap, setRoadmap] = useState<RoadmapData | null>(null);
+  const [targetRole, setTargetRole] = useState("AI / ML Systems Engineer");
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [progress] = useState(42);
+
+  const fetchRoadmap = useCallback(async () => {
+    try {
+      const data = await api.roadmap.getMe();
+      if (data && data.steps && data.steps.length > 0) {
+        setRoadmap(data);
+        if (data.target_role) setTargetRole(data.target_role);
+      }
+    } catch {
+      // Use default fallback if none saved yet
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRoadmap();
+  }, [fetchRoadmap]);
+
+  async function handleRegenerate() {
+    marvelAudio.playRepulsorClick();
+    setIsRegenerating(true);
+    try {
+      const updated = await api.roadmap.generate({ target_role: targetRole });
+      setRoadmap(updated);
+      marvelAudio.playVibraniumChime();
+    } catch (err) {
+      console.error("Failed to generate roadmap:", err);
+    } finally {
+      setIsRegenerating(false);
+    }
+  }
+
+  const displayStages = roadmap?.steps?.length
+    ? roadmap.steps.map((step, idx) => ({
+        num: String(idx + 1).padStart(2, "0"),
+        title: step.title,
+        desc: step.description,
+        skills: step.skills || [],
+        duration: step.duration_weeks ? `${step.duration_weeks} weeks` : "3 weeks",
+        status: idx === 0 ? "completed" : idx === 1 ? "inprogress" : "upcoming",
+      }))
+    : roadmapStages.map((s, idx) => ({
+        ...s,
+        desc: "Core competencies and practical milestones required for industry readiness.",
+        skills: idx === 0 ? ["Python", "Algorithms"] : idx === 1 ? ["Math", "Statistics"] : idx === 2 ? ["PyTorch", "Deep Learning"] : ["Docker", "APIs"],
+        duration: "3-4 weeks",
+      }));
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <div className="bg-[#0E1017] border border-[#EC1D24]/30 rounded-2xl p-6 mb-6 shadow-[0_0_25px_rgba(0,0,0,0.6)]">
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
           <div>
-            <p className="text-[10px] font-mono text-[#EC1D24] uppercase tracking-wider mb-1">
-              Active Career Roadmap
-            </p>
-            <h2 className="text-xl font-black italic uppercase text-white">
-              AI / ML Systems Engineer
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#EC1D24] animate-pulse" />
+              <p className="text-[10px] font-mono text-[#EC1D24] uppercase tracking-wider font-bold">
+                Tactical AI Career Roadmap
+              </p>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black italic uppercase text-white font-sans">
+              {targetRole}
             </h2>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
-              Overall Readiness
+            <p className="text-xs font-mono text-zinc-400 mt-0.5">
+              Powered by Stark Career Intelligence & Groq AI
             </p>
-            <p className="text-3xl font-black italic font-mono text-[#EC1D24]">{progress}%</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-black/60 border border-white/15 hover:border-yellow-400/60 hover:bg-[#EC1D24]/10 text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-amber-400 ${isRegenerating ? "animate-spin" : ""}`} />
+              {isRegenerating ? "Synthesizing..." : "Regenerate AI"}
+            </button>
+            <div className="text-right pl-3 border-l border-white/10">
+              <p className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider mb-0.5">
+                Readiness
+              </p>
+              <p className="text-2xl sm:text-3xl font-black italic font-mono text-[#EC1D24]">
+                {progress}%
+              </p>
+            </div>
           </div>
         </div>
         <ProgressBar value={progress} color="#EC1D24" />
       </div>
 
       <div className="relative space-y-0">
-        {roadmapStages.map((stage, i) => {
+        {displayStages.map((stage, i) => {
           const isCompleted = stage.status === "completed";
           const isInProgress = stage.status === "inprogress";
-          const isLast = i === roadmapStages.length - 1;
+          const isLast = i === displayStages.length - 1;
 
           return (
-            <div key={stage.num} className="relative flex gap-5">
+            <div key={stage.num} className="relative flex gap-4 sm:gap-5">
               {!isLast && (
                 <div
-                  className="absolute left-[19px] top-[38px] bottom-0 w-px"
+                  className="absolute left-[19px] top-[40px] bottom-0 w-px"
                   style={{
                     background: isCompleted ? "rgba(236,29,36,0.6)" : "rgba(255,255,255,0.08)",
                   }}
@@ -398,10 +516,18 @@ function RoadmapsTab() {
               )}
 
               <div
-                className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 mt-4 transition-all"
+                className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center border-2 z-10 mt-3 transition-all"
                 style={{
-                  background: isCompleted ? "rgba(236,29,36,0.2)" : isInProgress ? "rgba(255,215,0,0.15)" : "rgba(255,255,255,0.03)",
-                  borderColor: isCompleted ? "#EC1D24" : isInProgress ? "#FFD700" : "rgba(255,255,255,0.1)",
+                  background: isCompleted
+                    ? "rgba(236,29,36,0.2)"
+                    : isInProgress
+                    ? "rgba(255,215,0,0.15)"
+                    : "rgba(255,255,255,0.03)",
+                  borderColor: isCompleted
+                    ? "#EC1D24"
+                    : isInProgress
+                    ? "#FFD700"
+                    : "rgba(255,255,255,0.1)",
                 }}
               >
                 {isCompleted ? (
@@ -414,35 +540,61 @@ function RoadmapsTab() {
               </div>
 
               <div
-                className={`flex-1 flex items-center justify-between py-4 border-b transition-all ${
+                className={`flex-1 py-4 border-b transition-all ${
                   isLast ? "border-transparent" : "border-[#EC1D24]/15"
                 }`}
               >
-                <div>
-                  <span className="text-[10px] text-zinc-500 font-mono mr-2">{stage.num}</span>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] text-zinc-500 font-mono font-bold">
+                        STAGE {stage.num}
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono">
+                        · {stage.duration}
+                      </span>
+                    </div>
+                    <h3
+                      className={`text-sm sm:text-base font-bold font-sans ${
+                        isCompleted
+                          ? "text-zinc-400 line-through"
+                          : isInProgress
+                          ? "text-white"
+                          : "text-zinc-300"
+                      }`}
+                    >
+                      {stage.title}
+                    </h3>
+                    <p className="text-xs text-zinc-400 mt-1 font-mono leading-relaxed">
+                      {stage.desc}
+                    </p>
+
+                    {stage.skills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-2.5">
+                        {stage.skills.map((sk: string) => (
+                          <span
+                            key={sk}
+                            className="px-2 py-0.5 rounded bg-black/60 border border-white/10 text-[10px] font-mono text-cyan-300"
+                          >
+                            {sk}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   <span
-                    className={`text-sm font-bold font-sans ${
+                    className={`shrink-0 text-[10px] px-2.5 py-1 rounded-lg border font-mono font-bold uppercase tracking-wider ${
                       isCompleted
-                        ? "text-zinc-500 line-through"
+                        ? "bg-[#EC1D24]/20 border-[#EC1D24]/40 text-red-300"
                         : isInProgress
-                        ? "text-white"
-                        : "text-zinc-400"
+                        ? "bg-amber-950/60 border-amber-500/40 text-amber-300"
+                        : "bg-black/40 border-white/5 text-zinc-600"
                     }`}
                   >
-                    {stage.title}
+                    {isCompleted ? "Verified" : isInProgress ? "Active Track" : "Locked"}
                   </span>
                 </div>
-                <span
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-mono font-bold uppercase ${
-                    isCompleted
-                      ? "bg-[#EC1D24]/20 border-[#EC1D24]/40 text-red-300"
-                      : isInProgress
-                      ? "bg-amber-950/60 border-amber-500/40 text-amber-300"
-                      : "bg-black/40 border-white/5 text-zinc-600"
-                  }`}
-                >
-                  {isCompleted ? "Verified" : isInProgress ? "In Training" : "Locked"}
-                </span>
               </div>
             </div>
           );
@@ -452,7 +604,7 @@ function RoadmapsTab() {
   );
 }
 
-function CoursesTab() {
+function CoursesTab({ onOpenCourse }: { onOpenCourse: (c: CourseDetail) => void }) {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
 
@@ -524,11 +676,14 @@ function CoursesTab() {
               <SkillTag label={c.skill} />
             </div>
             <button
-              onClick={() => marvelAudio.playRepulsorClick()}
+              onClick={() => {
+                marvelAudio.playRepulsorClick();
+                onOpenCourse(c);
+              }}
               className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider border border-[#EC1D24]/30 bg-black/60 text-white hover:bg-[#EC1D24]/20 hover:border-[#EC1D24] transition-all cursor-pointer"
             >
               <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
-              Start Course
+              View & Start Course
             </button>
           </div>
         ))}
@@ -537,7 +692,7 @@ function CoursesTab() {
   );
 }
 
-function ProjectsTab() {
+function ProjectsTab({ onOpenProject }: { onOpenProject: (p: ProjectDetail) => void }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -573,11 +728,14 @@ function ProjectsTab() {
                 ))}
               </div>
               <button
-                onClick={() => marvelAudio.playRepulsorClick()}
+                onClick={() => {
+                  marvelAudio.playRepulsorClick();
+                  onOpenProject(p);
+                }}
                 className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-mono font-bold uppercase tracking-wider border border-yellow-400/50 bg-[#EC1D24] hover:bg-red-600 text-white transition-all cursor-pointer shadow-[0_0_12px_rgba(236,29,36,0.3)]"
               >
                 <Play className="w-3.5 h-3.5 text-amber-400" />
-                Start Project
+                View & Start Project
               </button>
             </div>
           </div>
@@ -589,6 +747,8 @@ function ProjectsTab() {
 
 export default function LearningPage() {
   const [activeTab, setActiveTab] = useState<LearningTab>("foryou");
+  const [selectedCourse, setSelectedCourse] = useState<CourseDetail | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
 
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden bg-[#0A0B10] relative">
@@ -642,10 +802,25 @@ export default function LearningPage() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === "foryou" && <ForYouTab />}
+        {activeTab === "foryou" && (
+          <ForYouTab
+            onOpenCourse={setSelectedCourse}
+            onOpenProject={setSelectedProject}
+          />
+        )}
         {activeTab === "roadmaps" && <RoadmapsTab />}
-        {activeTab === "courses" && <CoursesTab />}
-        {activeTab === "projects" && <ProjectsTab />}
+        {activeTab === "courses" && <CoursesTab onOpenCourse={setSelectedCourse} />}
+        {activeTab === "projects" && <ProjectsTab onOpenProject={setSelectedProject} />}
+
+        {/* Interactive Modals */}
+        <CourseDetailModal
+          course={selectedCourse}
+          onClose={() => setSelectedCourse(null)}
+        />
+        <ProjectDetailModal
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+        />
 
         <div className="h-12" />
       </div>

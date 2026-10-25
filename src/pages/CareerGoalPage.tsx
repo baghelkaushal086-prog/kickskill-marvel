@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Target,
   BrainCircuit,
@@ -21,11 +21,13 @@ import {
   Zap,
   ArrowDown,
   Shield,
+  Loader2,
 } from "lucide-react";
 import type { Page } from "../App";
 import { ShieldEagleLogo, ArcReactor } from "../components/marvel/MarvelIcons";
 import { HeroTint } from "../components/marvel/HeroTint";
 import { marvelAudio } from "../components/marvel/MarvelAudioEngine";
+import { api } from "../lib/api";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -191,6 +193,18 @@ export default function CareerGoalPage({ onNavigate }: CareerGoalPageProps) {
   const [selectedTimeline, setSelectedTimeline] = useState("6 Months");
   const [stipend, setStipend] = useState("20000");
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    api.profile
+      .getMe()
+      .then((p) => {
+        if (p.target_role) {
+          setSelectedRole(p.target_role);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function toggle<T>(set: Set<T>, val: T): Set<T> {
     const next = new Set(set);
@@ -198,10 +212,26 @@ export default function CareerGoalPage({ onNavigate }: CareerGoalPageProps) {
     return next;
   }
 
-  function handleSave() {
-    marvelAudio.playVibraniumChime();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2800);
+  async function handleSave() {
+    marvelAudio.playRepulsorClick();
+    setIsSaving(true);
+    try {
+      const careerGoalStr = `Target: ${selectedRole} (${selectedTimeline}) · ${Array.from(selectedIndustries).join(", ")}`;
+      await api.profile.updateMe({
+        target_role: selectedRole,
+        career_goal: careerGoalStr,
+      });
+      // Synchronize AI roadmap in background for chosen role
+      api.roadmap.generate({ target_role: selectedRole }).catch(() => {});
+
+      marvelAudio.playVibraniumChime();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error("Failed to persist career goal:", err);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const filteredRoles = roleSearch.trim()
@@ -446,10 +476,20 @@ export default function CareerGoalPage({ onNavigate }: CareerGoalPageProps) {
               </div>
               <button
                 onClick={handleSave}
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#EC1D24] border border-yellow-400 text-white text-xs font-mono font-bold uppercase tracking-wider hover:bg-red-600 transition-all cursor-pointer shadow-[0_0_15px_rgba(236,29,36,0.3)] ml-auto"
+                disabled={isSaving}
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#EC1D24] border border-yellow-400 text-white text-xs font-mono font-bold uppercase tracking-wider hover:bg-red-600 transition-all cursor-pointer shadow-[0_0_15px_rgba(236,29,36,0.3)] ml-auto disabled:opacity-50"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Save Career Goal
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Synchronizing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Save Career Goal
+                  </>
+                )}
               </button>
             </div>
           </div>

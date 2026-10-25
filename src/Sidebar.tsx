@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { marvelAudio } from "./components/marvel/MarvelAudioEngine";
 import { KickSkillLogo } from "./components/marvel/KickSkillLogo";
+import { ArcReactor } from "./components/marvel/MarvelIcons";
 
 interface SubItem {
   icon: React.ReactNode;
@@ -223,6 +224,7 @@ interface SidebarProps {
   activePage: Page;
   onNavigate: (p: Page) => void;
   onSignOut: () => void;
+  onOpenStarkAi?: () => void;
 }
 
 export default function Sidebar({
@@ -231,6 +233,7 @@ export default function Sidebar({
   activePage,
   onNavigate,
   onSignOut,
+  onOpenStarkAi,
 }: SidebarProps) {
   const [openSections, setOpenSections] = useState<Set<string>>(new Set());
 
@@ -318,10 +321,31 @@ export default function Sidebar({
           ))}
 
           {/* AI Agent section */}
-          <div className="pt-3 mt-3 border-t border-white/10">
-            <p className="px-3 pb-1.5 text-[10px] font-semibold text-neutral-400 uppercase tracking-widest">
-              AI AGENT
+          <div className="pt-3 mt-3 border-t border-white/10 space-y-1">
+            <p className="px-3 pb-1 text-[10px] font-semibold text-neutral-400 uppercase tracking-widest">
+              AI INTELLIGENCE
             </p>
+
+            {onOpenStarkAi && (
+              <button
+                onClick={() => {
+                  marvelAudio.playRepulsorClick();
+                  onOpenStarkAi();
+                  handleCollapse();
+                }}
+                onMouseEnter={() => marvelAudio.playHudHover()}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group justify-start relative text-cyan-300 hover:text-white bg-cyan-950/20 hover:bg-cyan-900/30 border border-cyan-500/30 hover:border-cyan-400/70 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
+              >
+                <div className="w-7 h-7 flex items-center justify-center shrink-0 rounded-lg bg-black/60 border border-cyan-500/50 p-1 group-hover:scale-110 group-hover:border-cyan-400 transition-all">
+                  <ArcReactor className="w-full h-full text-cyan-400" pulse={true} />
+                </div>
+                <div className="flex flex-col text-left">
+                  <span className="text-xs font-bold font-mono tracking-wide text-white">Stark Tactical AI</span>
+                  <span className="text-[10px] text-cyan-400/80 font-mono">Live Guidance // SSE</span>
+                </div>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 marvelAudio.playRepulsorClick();
@@ -329,7 +353,7 @@ export default function Sidebar({
                 handleCollapse();
               }}
               onMouseEnter={() => marvelAudio.playHudHover()}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group justify-start relative ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all cursor-pointer group justify-start relative ${
                 activePage === "agent-activity"
                   ? "bg-gradient-to-r from-[#EC1D24]/20 via-[#EC1D24]/10 to-transparent text-white border border-[#EC1D24]/50 shadow-[0_0_20px_rgba(236,29,36,0.25)] font-semibold"
                   : "text-neutral-300 hover:text-white hover:bg-[#EC1D24]/10 hover:border-[#EC1D24]/30 border border-transparent"

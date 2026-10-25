@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BadgeCheck,
   Share2,
@@ -32,6 +32,7 @@ import { ShieldEagleLogo, ArcReactor, InfinityStoneBadge, InfinityStoneType } fr
 import { InfinityStonesProgress } from "../components/marvel/InfinityStonesProgress";
 import { HeroTint } from "../components/marvel/HeroTint";
 import { marvelAudio } from "../components/marvel/MarvelAudioEngine";
+import { api, type ProfileData } from "../lib/api";
 
 function GithubIcon({ className }: { className?: string }) {
   return (
@@ -637,6 +638,22 @@ interface SkillPassportPageProps {
 export default function SkillPassportPage({ onNavigate }: SkillPassportPageProps) {
   const [activeTab, setActiveTab] = useState<PassportTab>("overview");
   const [showShare, setShowShare] = useState(false);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    api.profile
+      .getMe()
+      .then((p) => {
+        if (active && p) setProfile(p);
+      })
+      .catch((err) => {
+        console.warn("Could not fetch profile for passport:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="h-full overflow-y-auto overflow-x-hidden bg-[#0A0B10] relative">
@@ -672,6 +689,10 @@ export default function SkillPassportPage({ onNavigate }: SkillPassportPageProps
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <InteractiveHoverButton
               text="Edit Passport"
+              onClick={() => {
+                marvelAudio.playRepulsorClick();
+                onNavigate("settings");
+              }}
               className="w-28 sm:w-32 text-xs text-white/70 border-[#EC1D24]/30"
             />
             <CreepyButton
@@ -711,11 +732,11 @@ export default function SkillPassportPage({ onNavigate }: SkillPassportPageProps
               </div>
 
               <AdmitOneTicket
-                name="Nishant Singh"
+                name={profile?.name || "Tony Stark"}
                 presenter="KickSkill Verified Student"
-                event="AI / ML Systems Engineer"
-                venue="IIIT Tiruchirappalli"
-                dates="B.Tech CSE · Class of 2027"
+                event={profile?.target_role || "AI / ML Systems Engineer"}
+                venue={profile?.institution || "MIT / Stark Institute"}
+                dates={profile?.degree ? `${profile.degree} · Class of ${profile.graduation_year || 2026}` : "B.Tech CSE · Class of 2026"}
                 stubText="VERIFIED"
                 watermark="PASSPORT"
                 width={Math.min(680, window.innerWidth - 80)}

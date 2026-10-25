@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Sparkles,
   Bot,
@@ -28,6 +28,7 @@ import { ShieldEagleLogo, ArcReactor, AvengersLogo } from "../components/marvel/
 import { marvelAudio } from "../components/marvel/MarvelAudioEngine";
 import { triggerComicWord, triggerShieldSuccess } from "../components/marvel/MarvelCelebrations";
 import { HeroTint } from "../components/marvel/HeroTint";
+import { api, type OpportunityItem } from "../lib/api";
 
 type Tab = "Recommended" | "Internships" | "Jobs" | "Projects";
 
@@ -215,8 +216,27 @@ export default function OpportunitiesPage() {
 
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [showApply, setShowApply] = useState<Opportunity | null>(null);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(allOpportunities);
+  const [isApplying, setIsApplying] = useState(false);
 
-  const filtered = allOpportunities.filter((o) => {
+  useEffect(() => {
+    let active = true;
+    api.opportunities
+      .list()
+      .then((data) => {
+        if (active && data && data.length > 0) {
+          setOpportunities(data as Opportunity[]);
+        }
+      })
+      .catch((err) => {
+        console.warn("Using local opportunities:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filtered = opportunities.filter((o) => {
     const matchesTab =
       activeTab === "Recommended" ||
       (activeTab === "Internships" && o.mode === "Internship") ||
@@ -458,15 +478,28 @@ export default function OpportunitiesPage() {
                 View Full Details
               </button>
               <button
-                onClick={(e) => {
+                disabled={isApplying}
+                onClick={async (e) => {
+                  marvelAudio.playRepulsorClick();
+                  marvelAudio.playVibraniumChime();
                   triggerComicWord(e.clientX, e.clientY, "THWIP!");
-                  triggerShieldSuccess("Application Sent!");
+                  triggerShieldSuccess("Application Sent to SQLite!");
+                  if (showApply) {
+                    setIsApplying(true);
+                    try {
+                      await api.applications.apply(showApply.id);
+                    } catch (err) {
+                      console.warn("Could not save application to SQLite:", err);
+                    } finally {
+                      setIsApplying(false);
+                    }
+                  }
                   setShowApply(null);
                 }}
-                className="w-full py-2.5 rounded-xl border border-yellow-400 bg-[#EC1D24] hover:bg-red-600 text-xs font-mono font-bold text-white uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.5)] flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-xl border border-yellow-400 bg-[#EC1D24] hover:bg-red-600 disabled:opacity-50 text-xs font-mono font-bold text-white uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.5)] flex items-center justify-center gap-2"
               >
                 <Zap className="w-3.5 h-3.5" />
-                Submit Application
+                {isApplying ? "Dispatching..." : "Submit Application"}
               </button>
               <p className="text-[10px] text-zinc-500 text-center font-mono">
                 Your verified skills and credentials from your Skill Passport will be shared with the recruiter.

@@ -1,13 +1,23 @@
 """Shared Groq client. OpenAI-compatible, streaming + JSON mode supported."""
 from functools import lru_cache
-
-from groq import AsyncGroq
+from typing import Optional
 
 from .config import settings
 
+try:
+    from groq import AsyncGroq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    AsyncGroq = None  # type: ignore
+
+
+def is_groq_available() -> bool:
+    return GROQ_AVAILABLE and bool(settings.groq_api_key and settings.groq_api_key.strip())
+
 
 @lru_cache
-def get_groq() -> AsyncGroq:
-    if not settings.groq_api_key:
-        raise RuntimeError("GROQ_API_KEY is not set — copy .env.example to .env")
-    return AsyncGroq(api_key=settings.groq_api_key)
+def get_groq() -> Optional["AsyncGroq"]:
+    if not is_groq_available():
+        return None
+    return AsyncGroq(api_key=settings.groq_api_key.strip())

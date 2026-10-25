@@ -8,10 +8,13 @@ class Settings(BaseSettings):
     # Groq
     groq_api_key: str = ""
 
-    # Supabase
-    supabase_url: str = ""
-    supabase_service_key: str = ""
-    supabase_anon_key: str = ""
+    # Database (SQLite)
+    sqlite_db_path: str = "kickskill.db"
+
+    # Auth & Security
+    secret_key: str = "stark-kickskill-secret-jwt-key-2026"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
 
     # CORS
     frontend_url: str = "http://localhost:5173"

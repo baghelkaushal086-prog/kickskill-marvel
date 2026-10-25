@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BrainCircuit,
   Target,
@@ -19,6 +19,9 @@ import {
   Wrench,
   Building2,
   Shield,
+  X,
+  Award,
+  CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnimeNavBar } from "@/components/ui/anime-navbar";
@@ -27,6 +30,8 @@ import type { Page } from "@/App";
 import { ShieldEagleLogo, ArcReactor } from "../components/marvel/MarvelIcons";
 import { HeroTint } from "../components/marvel/HeroTint";
 import { marvelAudio } from "../components/marvel/MarvelAudioEngine";
+import { triggerMarvelBurst } from "../components/marvel/MarvelParticleBurst";
+import { api } from "../lib/api";
 
 const skillNavItems = [
   { name: "Technical", icon: BrainCircuit },
@@ -119,6 +124,86 @@ const assessmentCategories = [
   { icon: Target, label: "Domain Knowledge" },
 ];
 
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+const QUIZ_BANK: Record<string, QuizQuestion[]> = {
+  "Technical Skills": [
+    {
+      question: "In Python, which built-in data structure provides average O(1) time complexity for key lookups?",
+      options: ["List", "Dictionary (dict)", "Tuple", "Binary Search Tree"],
+      correctIndex: 1,
+      explanation: "Python dictionaries use hash tables, giving average O(1) key lookup and insertion time.",
+    },
+    {
+      question: "Which optimizer is most widely preferred in modern deep learning models for adaptive per-parameter learning rate scaling?",
+      options: ["Standard SGD", "AdamW", "Vanilla Adagrad", "Fixed Momentum SGD"],
+      correctIndex: 1,
+      explanation: "AdamW decouples weight decay from gradient updates, stabilizing adaptive learning rates.",
+    },
+    {
+      question: "What is the primary architectural purpose of Docker multi-stage builds?",
+      options: [
+        "To spawn multiple OS kernels simultaneously",
+        "To minimize final production image footprint by isolating build tooling from runtime",
+        "To enforce automated unit test coverage",
+        "To increase GPU VRAM allocation",
+      ],
+      correctIndex: 1,
+      explanation: "Multi-stage builds allow compiling binaries in a builder stage and copying only lean runtime artifacts to the target container.",
+    },
+  ],
+  "Data Structures & Algorithms": [
+    {
+      question: "What is the worst-case time complexity of QuickSort when choosing a naive pivot on an already-sorted array?",
+      options: ["O(n log n)", "O(n²)", "O(log n)", "O(n)"],
+      correctIndex: 1,
+      explanation: "Without randomized or median-of-three pivoting, sorted arrays cause O(n²) worst-case partitioning.",
+    },
+    {
+      question: "Which algorithm finds the shortest path in a graph with non-negative edge weights in O((V + E) log V)?",
+      options: ["Breadth-First Search", "Dijkstra's with Min-Heap", "Floyd-Warshall", "Bellman-Ford"],
+      correctIndex: 1,
+      explanation: "Dijkstra's algorithm using a min-heap operates in O((V + E) log V) time.",
+    },
+    {
+      question: "Which data structure maintains items strictly in First-In, First-Out (FIFO) sequence?",
+      options: ["Stack", "Queue", "Priority Queue", "Max-Heap"],
+      correctIndex: 1,
+      explanation: "Queues enforce First-In, First-Out sequence.",
+    },
+  ],
+  "Analytical Aptitude": [
+    {
+      question: "If a classifier achieves Precision = 0.80 and Recall = 0.80, what is its harmonic F1-Score?",
+      options: ["0.64", "0.80", "0.40", "1.00"],
+      correctIndex: 1,
+      explanation: "F1 is the harmonic mean: 2 * (0.80 * 0.80) / (0.80 + 0.80) = 0.80.",
+    },
+    {
+      question: "What does the area under the ROC curve (AUC-ROC) quantify?",
+      options: [
+        "The probability that a classifier ranks a random positive instance higher than a random negative instance",
+        "The memory size of the model checkpoint",
+        "The inference latency in milliseconds",
+        "The training loss decay rate",
+      ],
+      correctIndex: 0,
+      explanation: "AUC-ROC represents the degree of separability between classes across all possible decision thresholds.",
+    },
+    {
+      question: "Which regularizer penalizes the sum of squared weight values (L2) to prevent overfitting?",
+      options: ["L1 / Lasso", "Weight Decay / Ridge", "Max-Pooling", "Batch Normalization"],
+      correctIndex: 1,
+      explanation: "L2 weight decay penalizes large weights proportionally to their squared values.",
+    },
+  ],
+};
+
 const MARVEL_FUNNEL_CHAIN = [
   "#EC1D24", // Marvel Red
   "#FF333A", // Scarlet
@@ -172,11 +257,86 @@ function GlassCard({ children, className }: { children: React.ReactNode; classNa
 }
 
 export default function SkillsPage({ onNavigate }: { onNavigate: (p: Page) => void }) {
+  const [skills, setSkills] = useState(skillData);
   const [activeTab, setActiveTab] = useState<SkillCategory>("Technical");
+  const [activeGoal, setActiveGoal] = useState("AI / ML Systems Engineer");
   const [showAssessment, setShowAssessment] = useState(false);
   const [showGoalModal, setShowGoalModal] = useState(false);
 
-  const activeSkillsFunnel = skillFunnelData(skillData[activeTab]);
+  // Adaptive Quiz Evaluation State
+  const [activeQuizCategory, setActiveQuizCategory] = useState<string | null>(null);
+  const [quizIndex, setQuizIndex] = useState(0);
+  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [quizFinished, setQuizFinished] = useState(false);
+
+  useEffect(() => {
+    api.profile
+      .getMe()
+      .then((p) => {
+        if (p.target_role) setActiveGoal(p.target_role);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function handleSelectGoal(goal: string) {
+    marvelAudio.playRepulsorClick();
+    setActiveGoal(goal);
+    setShowGoalModal(false);
+    try {
+      await api.profile.updateMe({ target_role: goal });
+      api.roadmap.generate({ target_role: goal }).catch(() => {});
+    } catch (err) {
+      console.error("Failed to persist goal:", err);
+    }
+  }
+
+  function handleStartCategoryQuiz(categoryLabel: string) {
+    marvelAudio.playRepulsorClick();
+    setShowAssessment(false);
+    setActiveQuizCategory(categoryLabel);
+    setQuizIndex(0);
+    setSelectedOption(null);
+    setCorrectCount(0);
+    setQuizFinished(false);
+  }
+
+  const currentQuestions = activeQuizCategory && QUIZ_BANK[activeQuizCategory]
+    ? QUIZ_BANK[activeQuizCategory]
+    : QUIZ_BANK["Technical Skills"];
+
+  function handleNextQuestion() {
+    if (selectedOption === null) return;
+    marvelAudio.playRepulsorClick();
+
+    const isCorrect = selectedOption === currentQuestions[quizIndex].correctIndex;
+    const newCorrect = isCorrect ? correctCount + 1 : correctCount;
+    setCorrectCount(newCorrect);
+
+    if (quizIndex < currentQuestions.length - 1) {
+      setQuizIndex((prev) => prev + 1);
+      setSelectedOption(null);
+    } else {
+      setQuizFinished(true);
+      marvelAudio.playVibraniumChime();
+      triggerMarvelBurst(window.innerWidth / 2, window.innerHeight / 2);
+      // Bump verified skills in state
+      setSkills((prev) => ({
+        ...prev,
+        Technical: prev.Technical.map((s) =>
+          s.name === "PyTorch"
+            ? { ...s, level: 75 }
+            : s.name === "Docker"
+            ? { ...s, level: 68 }
+            : s.name === "Python"
+            ? { ...s, level: 92 }
+            : s
+        ),
+      }));
+    }
+  }
+
+  const activeSkillsFunnel = skillFunnelData(skills[activeTab]);
 
   return (
     <div className="relative h-full flex flex-col bg-[#0A0B10] text-white overflow-hidden">
@@ -237,7 +397,7 @@ export default function SkillsPage({ onNavigate }: { onNavigate: (p: Page) => vo
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xl font-black italic text-white uppercase font-sans">
-                    AI / ML Systems Engineer
+                    {activeGoal}
                   </p>
                   <p className="text-xs font-mono text-zinc-400 mt-1">Readiness Index</p>
                   <div className="flex items-baseline gap-1.5 mt-1 font-mono">
@@ -485,10 +645,7 @@ export default function SkillsPage({ onNavigate }: { onNavigate: (p: Page) => vo
               {assessmentCategories.map(({ icon: Icon, label }) => (
                 <button
                   key={label}
-                  onClick={() => {
-                    marvelAudio.playRepulsorClick();
-                    setShowAssessment(false);
-                  }}
+                  onClick={() => handleStartCategoryQuiz(label)}
                   className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-[#EC1D24]/20 bg-black/60 hover:bg-[#EC1D24]/15 hover:border-[#EC1D24] text-xs text-zinc-300 hover:text-white transition-all cursor-pointer text-left"
                 >
                   <Icon className="w-4 h-4 text-[#EC1D24] shrink-0" />
@@ -497,6 +654,129 @@ export default function SkillsPage({ onNavigate }: { onNavigate: (p: Page) => vo
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Adaptive Evaluation Modal */}
+      {activeQuizCategory && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
+          onClick={() => setActiveQuizCategory(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-[#0E1017] border border-[#EC1D24]/50 rounded-2xl shadow-[0_0_60px_rgba(236,29,36,0.35)] p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <ShieldEagleLogo className="w-5 h-5 text-[#EC1D24]" />
+                <div>
+                  <h3 className="text-sm font-black italic uppercase text-white font-sans">
+                    S.H.I.E.L.D. Tactical Assessment
+                  </h3>
+                  <p className="text-[10px] font-mono text-cyan-400">
+                    {activeQuizCategory} // Question {quizIndex + 1} of {currentQuestions.length}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveQuizCategory(null)}
+                className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {!quizFinished ? (
+              <div>
+                {/* Progress bar */}
+                <div className="w-full h-1.5 bg-black/60 rounded-full mb-5 overflow-hidden border border-white/10">
+                  <div
+                    className="h-full bg-gradient-to-r from-[#EC1D24] to-amber-400 transition-all duration-300"
+                    style={{
+                      width: `${((quizIndex + 1) / currentQuestions.length) * 100}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Question */}
+                <h4 className="text-sm sm:text-base font-bold text-white mb-4 leading-snug font-sans">
+                  {currentQuestions[quizIndex].question}
+                </h4>
+
+                {/* Options */}
+                <div className="space-y-2.5 mb-6">
+                  {currentQuestions[quizIndex].options.map((opt, oIdx) => {
+                    const isSelected = selectedOption === oIdx;
+                    return (
+                      <button
+                        key={oIdx}
+                        onClick={() => {
+                          marvelAudio.playRepulsorClick();
+                          setSelectedOption(oIdx);
+                        }}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left text-xs font-mono transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-[#EC1D24]/20 border-[#EC1D24] text-white shadow-[0_0_15px_rgba(236,29,36,0.3)] font-semibold"
+                            : "bg-black/50 border-white/10 text-neutral-300 hover:border-white/30 hover:bg-black/70"
+                        }`}
+                      >
+                        <span
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border shrink-0 ${
+                            isSelected
+                              ? "bg-[#EC1D24] text-white border-yellow-400"
+                              : "border-white/20 text-neutral-400"
+                          }`}
+                        >
+                          {String.fromCharCode(65 + oIdx)}
+                        </span>
+                        <span>{opt}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    Select an answer to dispatch verification
+                  </span>
+                  <button
+                    onClick={handleNextQuestion}
+                    disabled={selectedOption === null}
+                    className="px-5 py-2 rounded-xl bg-[#EC1D24] hover:bg-[#ff2b33] disabled:opacity-40 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_15px_rgba(236,29,36,0.4)]"
+                  >
+                    {quizIndex === currentQuestions.length - 1 ? "Submit Assessment" : "Next Question →"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <div className="w-14 h-14 rounded-2xl bg-[#EC1D24]/20 border border-[#EC1D24] mx-auto flex items-center justify-center text-[#EC1D24] mb-3 shadow-[0_0_30px_rgba(236,29,36,0.5)]">
+                  <Award className="w-8 h-8 text-amber-400" />
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#EC1D24]/20 border border-[#EC1D24]/50 text-red-300 uppercase tracking-widest">
+                  VERIFICATION SUCCESSFUL
+                </span>
+                <h4 className="text-xl font-black italic uppercase text-white mt-2 mb-1">
+                  Tactical Competency Verified
+                </h4>
+                <p className="text-xs font-mono text-cyan-300 mb-4">
+                  Assessment Score: {Math.round((correctCount / currentQuestions.length) * 100)}% ({correctCount} / {currentQuestions.length} Correct)
+                </p>
+                <div className="p-3 rounded-xl bg-black/60 border border-emerald-500/30 text-emerald-300 text-xs font-mono mb-6 flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Skill Passport Telemetry Updated: Verified Mind Stone Awarded
+                </div>
+                <button
+                  onClick={() => setActiveQuizCategory(null)}
+                  className="w-full py-2.5 rounded-xl bg-[#EC1D24] hover:bg-[#ff2b33] text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(236,29,36,0.4)]"
+                >
+                  Return to Skills Matrix
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -520,19 +800,16 @@ export default function SkillsPage({ onNavigate }: { onNavigate: (p: Page) => vo
                 (goal) => (
                   <button
                     key={goal}
-                    onClick={() => {
-                      marvelAudio.playRepulsorClick();
-                      setShowGoalModal(false);
-                    }}
+                    onClick={() => handleSelectGoal(goal)}
                     className={cn(
                       "w-full flex items-center justify-between px-4 py-2.5 rounded-xl border text-xs transition-colors cursor-pointer",
-                      goal === "AI / ML Systems Engineer"
+                      goal === activeGoal
                         ? "border-[#EC1D24] bg-[#EC1D24]/20 text-white font-bold shadow-[0_0_12px_rgba(236,29,36,0.3)]"
                         : "border-white/10 bg-black/60 text-zinc-300 hover:border-[#EC1D24]"
                     )}
                   >
                     {goal}
-                    {goal === "AI / ML Systems Engineer" && (
+                    {goal === activeGoal && (
                       <CheckCircle className="w-4 h-4 text-[#EC1D24]" />
                     )}
                   </button>
